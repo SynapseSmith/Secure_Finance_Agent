@@ -1,0 +1,26 @@
+# Prometheus 설정
+global:
+  scrape_interval: 15s
+  evaluation_interval: 15s
+
+scrape_configs:
+  # FastAPI 애플리케이션 메트릭
+  - job_name: 'finance-agent-api'
+    static_configs:
+      - targets: ['agent-api:8000']
+    metrics_path: '/metrics'
+  
+  # Prometheus 자체 메트릭
+  - job_name: 'prometheus'
+    static_configs:
+      - targets: ['localhost:9090']
+  
+  # PostgreSQL 메트릭 (postgres_exporter 사용 시)
+  - job_name: 'postgres'
+    static_configs:
+      - targets: ['postgres:5432']
+  
+  # Redis 메트릭 (redis_exporter 사용 시)
+  - job_name: 'redis'
+    static_configs:
+      - targets: ['redis:6379']

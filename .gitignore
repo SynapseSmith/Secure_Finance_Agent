@@ -1,0 +1,51 @@
+.env
+.env.local
+*.pyc
+__pycache__/
+*.pyo
+*.pyd
+.Python
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+.eggs/
+*.log
+logs/
+*.db
+*.sqlite
+.pytest_cache/
+.coverage
+htmlcov/
+.mypy_cache/
+.ruff_cache/
+.venv/
+venv/
+ENV/
+
+# 보안 민감 정보
+vault_data/
+secrets/
+*.key
+*.pem
+*.crt
+*.p12
+*.gpg
+private_keys/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# 데이터
+data/
+uploads/
+tmp/
+
+# Docker
+.docker/
+docker-compose.override.yml
