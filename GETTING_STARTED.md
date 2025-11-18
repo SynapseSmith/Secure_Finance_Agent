@@ -1,16 +1,6 @@
-# 시작 가이드
+# 시작하기
 
-## 1️⃣ 빠른 시작 (5분)
-
-### 사전 준비
-```bash
-# Docker 및 Docker Compose 확인
-docker --version
-docker-compose --version
-
-# Git 클론 (이미 완료)
-cd secure-finance-agent
-```
+## 설치
 
 ### 환경 설정
 ```bash
@@ -35,26 +25,16 @@ nano .env  # 또는 원하는 에디터 사용
 
 ### 실행
 ```bash
-# 1. 인프라 시작
 docker-compose up -d
-
-# 2. 서비스 상태 확인 (모두 healthy가 될 때까지 대기)
 docker-compose ps
-
-# 3. 로그 확인
-docker-compose logs -f agent-api
 ```
 
-### 테스트
+### 확인
 ```bash
-# 헬스 체크
 curl http://localhost:8000/health
-
-# API 문서 접속
-open http://localhost:8000/api/docs
 ```
 
-## 2️⃣ 개발 환경 설정 (로컬)
+## 개발 환경
 
 ### Python 환경
 ```bash
@@ -74,13 +54,12 @@ poetry shell
 poetry run alembic upgrade head
 ```
 
-### 로컬 서버 실행
+### 로컬 실행
 ```bash
-# 개발 서버 (자동 리로드)
-poetry run uvicorn src.main:app --reload --host 0.0.0.0 --port 8000
+poetry run uvicorn src.main:app --reload
 ```
 
-## 3️⃣ API 사용 예제
+## API 사용
 
 ### 1. 사용자 등록
 ```bash
@@ -100,21 +79,15 @@ curl -X POST "http://localhost:8000/api/v1/auth/login" \
   -d "username=user@example.com&password=securepass123"
 ```
 
-응답에서 `access_token`을 저장하세요.
-
 ### 3. 에이전트 질의
 ```bash
-export TOKEN="your_access_token_here"
-
 curl -X POST "http://localhost:8000/api/v1/agents/query" \
   -H "Authorization: Bearer $TOKEN" \
   -H "Content-Type: application/json" \
-  -d '{
-    "query": "최근 포트폴리오의 리스크를 분석해주세요"
-  }'
+  -d '{"query": "포트폴리오 리스크 분석"}'
 ```
 
-## 4️⃣ Python SDK 사용
+## Python 사용
 
 ```python
 import httpx
@@ -166,64 +139,12 @@ async def main():
 asyncio.run(main())
 ```
 
-## 5️⃣ 모니터링 대시보드
+## 모니터링
 
-### Grafana 접속
-```
-URL: http://localhost:3000
-ID: admin
-PW: admin (첫 로그인 후 변경)
-```
+- Grafana: http://localhost:3000 (admin/admin)
+- Prometheus: http://localhost:9090
 
-### Prometheus 접속
-```
-URL: http://localhost:9090
-```
-
-### 주요 메트릭
-- `http_requests_total`: 총 요청 수
-- `http_request_duration_seconds`: 응답 시간
-- `agent_queries_total`: 에이전트 질의 수
-- `security_events_total`: 보안 이벤트 수
-
-## 6️⃣ 개발 워크플로우
-
-### 1. 기능 개발
-```bash
-# 새 브랜치 생성
-git checkout -b feature/new-feature
-
-# 코드 작성
-# ...
-
-# 포맷팅 및 린팅
-poetry run black src/
-poetry run ruff check src/
-
-# 타입 체크
-poetry run mypy src/
-```
-
-### 2. 테스트
-```bash
-# 전체 테스트
-poetry run pytest
-
-# 커버리지 포함
-poetry run pytest --cov=src --cov-report=html
-
-# 특정 테스트만
-poetry run pytest tests/test_agents.py -v
-```
-
-### 3. 커밋
-```bash
-git add .
-git commit -m "feat: 새로운 기능 추가"
-git push origin feature/new-feature
-```
-
-## 7️⃣ 문제 해결
+## 문제 해결
 
 ### Docker 컨테이너가 시작하지 않을 때
 ```bash
@@ -254,38 +175,6 @@ docker-compose exec redis redis-cli ping
 
 ### 포트 충돌
 ```bash
-# 사용 중인 포트 확인
 lsof -i :8000
-lsof -i :5432
-
 # docker-compose.yml에서 포트 변경
 ```
-
-## 8️⃣ 다음 단계
-
-1. **커스터마이징**
-   - `src/agents/tools.py`: 도구 추가
-   - `src/agents/orchestrator.py`: 워크플로우 수정
-   - `src/api/routes/`: API 엔드포인트 추가
-
-2. **보안 강화**
-   - `SECURITY.md` 체크리스트 확인
-   - Vault 프로덕션 설정
-   - SSL/TLS 인증서 설정
-
-3. **성능 최적화**
-   - 캐싱 전략 구현
-   - 데이터베이스 인덱스 최적화
-   - 부하 테스트 수행
-
-4. **배포**
-   - Kubernetes 설정
-   - CI/CD 파이프라인
-   - 모니터링 알림 설정
-
-## 📚 추가 리소스
-
-- [LangGraph 문서](https://langchain-ai.github.io/langgraph/)
-- [FastAPI 문서](https://fastapi.tiangolo.com/)
-- [Claude API 문서](https://docs.anthropic.com/)
-- [보안 베스트 프랙티스](./SECURITY.md)
