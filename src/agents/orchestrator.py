@@ -6,6 +6,8 @@ from typing import TypedDict, Annotated, Sequence
 from langgraph.graph import StateGraph, END
 from langgraph.prebuilt import ToolExecutor
 from langchain_anthropic import ChatAnthropic
+from langchain_openai import ChatOpenAI
+from langchain_community.chat_models import ChatLiteLLM
 from langchain_core.messages import BaseMessage, HumanMessage, AIMessage
 import operator
 
@@ -16,56 +18,95 @@ from .tools import FinancialAnalysisTool, RiskAssessmentTool, ComplianceCheckerT
 
 class AgentState(TypedDict):
     """에이전트 상태 관리"""
-    messages: Annotated[Sequence[BaseMessage], operator.add]
-    user_id: str
-    session_id: str
+    messages: Annotated[Sequence[BaseMessage], operator.add]  
+    user_id: str  # 사용자 ID
+    session_id: str   # 세션 ID
     risk_level: str  # low, medium, high, critical
-    requires_approval: bool
-    compliance_checked: bool
-    audit_trail: list
-
+    requires_approval: bool  # 승인 필요 여부
+    compliance_checked: bool  # 규제 준수 여부
+    audit_trail: list  # 감사 추적 기록
 
 class SecureFinancialAgent:
     """보안 강화 금융 AI 에이전트"""
     
     def __init__(self):
-        self.audit_logger = AuditLogger()
+        self.audit_logger = AuditLogger()  # 감사 로거
         
-        # LLM 초기화 (Claude 3.5 Sonnet)
-        self.llm = ChatAnthropic(
-            model=settings.MODEL_NAME,
-            temperature=0.1,  # 금융에서는 낮은 temperature 사용
-            max_tokens=4096,
-            api_key=settings.ANTHROPIC_API_KEY
-        )
+        # LLM 초기화 (프로바이더별)
+        self.llm = self._initialize_llm()
         
         # 도구 초기화
         self.tools = [
-            FinancialAnalysisTool(),
-            RiskAssessmentTool(),
-            ComplianceCheckerTool(),
+            FinancialAnalysisTool(),  # 금융 분석 도구
+            RiskAssessmentTool(),  # 리스크 평가 도구
+            ComplianceCheckerTool(),  # 규제 준수 검사 도구
         ]
-        self.tool_executor = ToolExecutor(self.tools)
+        self.tool_executor = ToolExecutor(self.tools)  # 도구 실행기
         
         # 그래프 빌드
-        self.graph = self._build_graph()
+        self.graph = self._build_graph()  # 그래프 빌드
+    
+    def _initialize_llm(self):
+        """LLM 프로바이더 초기화"""
+        provider = settings.LLM_PROVIDER.lower()  # 프로바이더 선택
+        
+        if provider == "anthropic":  # Anthropic LLM
+            return ChatAnthropic(
+                model=settings.MODEL_NAME,
+                temperature=0.1,
+                max_tokens=4096,
+                api_key=settings.ANTHROPIC_API_KEY
+            )
+        elif provider == "openai":  # OpenAI LLM
+            return ChatOpenAI(
+                model=settings.MODEL_NAME,
+                temperature=0.1,
+                max_tokens=4096,
+                api_key=settings.OPENAI_API_KEY
+            )
+        elif provider == "vllm":
+            # vLLM은 OpenAI 호환 API 사용
+            return ChatOpenAI(
+                model=settings.VLLM_MODEL_NAME,
+                base_url=settings.VLLM_API_BASE,
+                api_key=settings.VLLM_API_KEY or "EMPTY",
+                temperature=0.1,
+                max_tokens=4096
+            )
+        elif provider == "ollama":
+            # Ollama도 OpenAI 호환 API
+            return ChatOpenAI(
+                model=settings.OLLAMA_MODEL_NAME,
+                base_url=settings.OLLAMA_API_BASE,
+                api_key="ollama",
+                temperature=0.1,
+                max_tokens=4096
+            )
+        else:
+            # LiteLLM 통합 (폴백)
+            return ChatLiteLLM(
+                model=f"{provider}/{settings.MODEL_NAME}",
+                temperature=0.1,
+                max_tokens=4096
+            )
     
     def _build_graph(self) -> StateGraph:
         """LangGraph 워크플로우 구성"""
-        workflow = StateGraph(AgentState)
+        workflow = StateGraph(AgentState)  # 워크플로우 초기화
         
         # 노드 추가
-        workflow.add_node("classify_request", self._classify_request)
-        workflow.add_node("risk_assessment", self._assess_risk)
-        workflow.add_node("compliance_check", self._check_compliance)
-        workflow.add_node("process_query", self._process_query)
-        workflow.add_node("approval_required", self._require_approval)
-        workflow.add_node("generate_response", self._generate_response)
+        workflow.add_node("classify_request", self._classify_request)  # 요청 분류
+        workflow.add_node("risk_assessment", self._assess_risk)  # 리스크 평가
+        workflow.add_node("compliance_check", self._check_compliance)  # 규제 준수 검사
+        workflow.add_node("process_query", self._process_query)  # 쿼리 처리
+        workflow.add_node("approval_required", self._require_approval)  # 승인 필요     
+        workflow.add_node("generate_response", self._generate_response)  # 응답 생성
         
         # 엣지 설정 (조건부 라우팅)
         workflow.set_entry_point("classify_request")
         
-        workflow.add_conditional_edges(
+        # 조건부 엣지 추가
+        workflow.add_conditional_edges(  
             "classify_request",
             self._should_assess_risk,
             {
@@ -74,8 +115,10 @@ class SecureFinancialAgent:
             }
         )
         
+        # 엣지 연결
         workflow.add_edge("risk_assessment", "compliance_check")
         
+        # 승인 필요 여부 판단
         workflow.add_conditional_edges(
             "compliance_check",
             self._should_require_approval,
@@ -85,9 +128,9 @@ class SecureFinancialAgent:
             }
         )
         
-        workflow.add_edge("approval_required", "process_query")
-        workflow.add_edge("process_query", "generate_response")
-        workflow.add_edge("generate_response", END)
+        workflow.add_edge("approval_required", "process_query")  # 승인 후 쿼리 처리
+        workflow.add_edge("process_query", "generate_response")  # 응답 생성
+        workflow.add_edge("generate_response", END)  # 종료
         
         return workflow.compile()
     

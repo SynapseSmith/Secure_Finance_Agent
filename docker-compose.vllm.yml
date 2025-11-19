@@ -1,0 +1,58 @@
+version: '3.9'
+
+# vLLM 자체 호스팅 설정
+# GPU가 있는 환경에서 사용
+
+services:
+  # vLLM 서버
+  vllm:
+    image: vllm/vllm-openai:latest
+    container_name: finance-agent-vllm
+    ports:
+      - "8001:8000"
+    volumes:
+      - vllm_models:/root/.cache/huggingface
+    environment:
+      # 모델 설정
+      MODEL_NAME: meta-llama/Llama-3-70b-chat-hf
+      # GPU 설정
+      CUDA_VISIBLE_DEVICES: "0"
+      # vLLM 최적화 옵션
+      MAX_MODEL_LEN: 4096
+      TENSOR_PARALLEL_SIZE: 1
+    deploy:
+      resources:
+        reservations:
+          devices:
+            - driver: nvidia
+              count: 1
+              capabilities: [gpu]
+    networks:
+      - finance-agent-network
+    restart: unless-stopped
+    command: >
+      --model ${MODEL_NAME}
+      --host 0.0.0.0
+      --port 8000
+      --max-model-len 4096
+      --served-model-name finance-llm
+
+  # Ollama (로컬 모델)
+  ollama:
+    image: ollama/ollama:latest
+    container_name: finance-agent-ollama
+    ports:
+      - "11434:11434"
+    volumes:
+      - ollama_models:/root/.ollama
+    networks:
+      - finance-agent-network
+    restart: unless-stopped
+
+volumes:
+  vllm_models:
+  ollama_models:
+
+networks:
+  finance-agent-network:
+    external: true

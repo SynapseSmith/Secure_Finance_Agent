@@ -22,8 +22,17 @@ class Settings(BaseSettings):
     # LLM 설정
     OPENAI_API_KEY: str = Field(default="")
     ANTHROPIC_API_KEY: str = Field(default="")
-    LLM_PROVIDER: str = Field(default="anthropic")
+    LLM_PROVIDER: str = Field(default="anthropic")  # anthropic, openai, vllm, ollama
     MODEL_NAME: str = Field(default="claude-3-5-sonnet-20241022")
+    
+    # vLLM 설정
+    VLLM_API_BASE: str = Field(default="http://localhost:8001/v1")
+    VLLM_MODEL_NAME: str = Field(default="meta-llama/Llama-3-70b-chat-hf")
+    VLLM_API_KEY: str = Field(default="")
+    
+    # Ollama 설정
+    OLLAMA_API_BASE: str = Field(default="http://localhost:11434")
+    OLLAMA_MODEL_NAME: str = Field(default="llama3:70b")
     
     # 데이터베이스
     POSTGRES_HOST: str = Field(default="localhost")

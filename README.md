@@ -21,7 +21,7 @@
 - PostgreSQL + pgvector
 - Qdrant (벡터 검색)
 - Redis (캐싱)
-
+ 
 **보안**
 - JWT 인증
 - AES-256 암호화

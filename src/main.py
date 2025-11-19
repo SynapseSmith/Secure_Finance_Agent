@@ -2,7 +2,7 @@
 보안 중심 금융 AI 에이전트 시스템
 FastAPI 메인 애플리케이션
 """
-from contextlib import asynccontextmanager
+from contextlib import asynccontextmanager  # 비동기 컨텍스트 관리자
 from fastapi import FastAPI, Request, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.middleware.trustedhost import TrustedHostMiddleware
@@ -13,8 +13,9 @@ import structlog
 from .config import settings
 from .security.middleware import SecurityHeadersMiddleware, RateLimitMiddleware
 from .security.audit import AuditLogger
-from .api.routes import agents, auth, health
+from .api.routes import agents, auth, health, documents
 from .database import init_db
+from .services.redis import init_redis, close_redis
 
 logger = structlog.get_logger()
 
@@ -24,10 +25,18 @@ async def lifespan(app: FastAPI):
     """애플리케이션 시작/종료 시 실행"""
     # 시작 시
     logger.info("애플리케이션 시작", environment=settings.ENVIRONMENT)
+    
+    # 데이터베이스 초기화
     await init_db()
+    
+    # Redis 초기화
+    await init_redis()
+    
     yield
+    
     # 종료 시
     logger.info("애플리케이션 종료")
+    await close_redis()
 
 
 app = FastAPI(
@@ -62,6 +71,7 @@ if settings.API_CORS_ORIGINS:
 app.include_router(health.router, prefix="/health", tags=["Health"])
 app.include_router(auth.router, prefix="/api/v1/auth", tags=["Authentication"])
 app.include_router(agents.router, prefix="/api/v1/agents", tags=["Agents"])
+app.include_router(documents.router, prefix="/api/v1/documents", tags=["Documents"])
 
 # Prometheus 메트릭 엔드포인트
 metrics_app = make_asgi_app()
